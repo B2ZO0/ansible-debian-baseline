@@ -1,0 +1,51 @@
+---
+# Used by CI on a throw-away virtual machine: applies the role to itself.
+- name: Test ansible-debian-baseline on this machine
+  hosts: localhost
+  connection: local
+  become: true
+  vars:
+    baseline_timezone: "Europe/Paris"
+    baseline_admin_users:
+      - name: ci-admin
+        ssh_keys: ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDummyKeyForTestsOnly ci@example"]
+        sudo: true
+    baseline_firewall_rules:
+      - { port: 443, proto: tcp, comment: "HTTPS" }
+    baseline_trusted_networks: ["10.0.0.0/8"]
+    baseline_netcockpit_server: "127.0.0.1"
+  roles:
+    - role: debian_baseline
+
+- name: Check the result
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the effective SSH settings
+      ansible.builtin.command: sshd -T
+      register: sshd_effective
+      changed_when: false
+
+    - name: Password login is off and root login is refused
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in sshd_effective.stdout"
+          - "'permitrootlogin no' in sshd_effective.stdout"
+
+    - name: Read the firewall
+      ansible.builtin.command: nft list table inet baseline
+      register: nft_rules
+      changed_when: false
+
+    - name: The firewall drops by default and allows SSH and HTTPS
+      ansible.builtin.assert:
+        that:
+          - "'policy drop' in nft_rules.stdout"
+          - "'tcp dport 22 accept' in nft_rules.stdout"
+          - "'tcp dport 443 accept' in nft_rules.stdout"
+
+    - name: Services are running
+      ansible.builtin.command: systemctl is-active fail2ban chrony alloy lldpd
+      changed_when: false

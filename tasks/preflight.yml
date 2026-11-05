@@ -1,0 +1,43 @@
+---
+- name: List the admin users to keep
+  ansible.builtin.set_fact:
+    baseline_users_present: >-
+      {{ (baseline_admin_users | rejectattr('state', 'defined') | list)
+         + (baseline_admin_users | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | list) }}
+
+# Never lock the administrator out: with password login disabled, someone must have an SSH key.
+- name: Find the home folder of the connecting user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ansible_user | default(ansible_env.SUDO_USER | default(ansible_env.USER | default('root'))) }}"
+    fail_key: false
+  when: not baseline_ssh_password_auth | bool
+
+- name: Look for an SSH key of the connecting user
+  ansible.builtin.stat:
+    path: "{{ (ansible_facts['getent_passwd'] | dict2items | first).value[4] | default('/root') }}/.ssh/authorized_keys"
+  register: baseline_connecting_keys
+  when:
+    - not baseline_ssh_password_auth | bool
+    - ansible_facts['getent_passwd'] | default({}) | dict2items | selectattr('value') | list | length > 0
+
+- name: Refuse to disable password login without any SSH key
+  ansible.builtin.assert:
+    that:
+      - >-
+        (baseline_users_present | map(attribute='ssh_keys', default=[]) | flatten | length > 0)
+        or (baseline_connecting_keys.stat.size | default(0)) > 0
+        or (ansible_connection | default('ssh')) == 'local'
+    fail_msg: >-
+      Password login would be disabled but no SSH key was found: add ssh_keys to baseline_admin_users,
+      put a key in ~/.ssh/authorized_keys of the connecting user, or set baseline_ssh_password_auth: true.
+    quiet: true
+  when: not baseline_ssh_password_auth | bool
+
+- name: Refuse to firewall SSH away from everyone
+  ansible.builtin.assert:
+    that:
+      - baseline_firewall_ssh_sources | length > 0
+    fail_msg: "baseline_firewall_ssh_sources is empty: nobody could reach SSH once the firewall is on."
+    quiet: true
+  when: baseline_firewall_enabled | bool

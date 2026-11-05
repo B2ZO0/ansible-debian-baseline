@@ -1,0 +1,33 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+# Inbound filter of ansible-debian-baseline. Outbound traffic is not filtered.
+# Own table: reloading this file never touches the rules of Docker or other tools.
+
+table inet baseline
+delete table inet baseline
+
+table inet baseline {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    iif "lo" accept
+    ct state established,related accept
+    ct state invalid drop
+{% if baseline_firewall_allow_ping | bool %}
+    meta l4proto icmp icmp type { echo-request, destination-unreachable, time-exceeded } accept
+{% endif %}
+    meta l4proto ipv6-icmp accept
+
+    # SSH
+{% for src in baseline_firewall_ssh_sources %}
+    {{ 'ip6' if ':' in src else 'ip' }} saddr {{ src }} tcp dport {{ baseline_ssh_port }} accept
+{% endfor %}
+{% for r in baseline_firewall_rules %}
+
+    # {{ r.comment | default(r.proto | default('tcp') ~ '/' ~ r.port) }}
+{% for src in r.sources | default(['0.0.0.0/0', '::/0']) %}
+    {{ 'ip6' if ':' in src else 'ip' }} saddr {{ src }} {{ r.proto | default('tcp') }} dport {{ r.port }} accept
+{% endfor %}
+{% endfor %}
+  }
+}

@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: debian_baseline
+  namespace: b2zo0
+  author: Enzo Marechal
+  description: >-
+    A production-ready Debian or Ubuntu server in one role: SSH hardening, nftables,
+    fail2ban, automatic security updates, time, kernel hardening and the NetCockpit agent.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [all]
+    - name: Ubuntu
+      versions: [all]
+  galaxy_tags: [debian, ubuntu, hardening, security, ssh, firewall, nftables, fail2ban, baseline, netcockpit]
+dependencies: []

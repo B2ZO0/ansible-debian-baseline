@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Export LLDP/CDP neighbours for Alloy (NetCockpit)
+After=lldpd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/alloy-lldp/lldp2prom.py /var/lib/alloy/textfile/lldp.prom

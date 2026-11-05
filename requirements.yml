@@ -1,0 +1,6 @@
+---
+roles:
+  - name: debian_baseline
+    src: https://github.com/B2ZO0/ansible-debian-baseline.git
+    scm: git
+    version: main

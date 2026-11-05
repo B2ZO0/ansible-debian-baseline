@@ -1,0 +1,48 @@
+---
+- name: Check the target system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    fail_msg: "ansible-debian-baseline supports Debian and Ubuntu only (found {{ ansible_facts['distribution'] }})."
+    quiet: true
+  tags: [always]
+
+- name: Safety checks
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [always]
+
+- name: System settings and packages
+  ansible.builtin.import_tasks: system.yml
+  tags: [system]
+
+- name: Admin users
+  ansible.builtin.import_tasks: users.yml
+  tags: [users]
+
+- name: SSH hardening
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Firewall
+  ansible.builtin.import_tasks: firewall.yml
+  when: baseline_firewall_enabled | bool
+  tags: [firewall]
+
+- name: Fail2ban
+  ansible.builtin.import_tasks: fail2ban.yml
+  when: baseline_fail2ban_enabled | bool
+  tags: [fail2ban]
+
+- name: Automatic security updates
+  ansible.builtin.import_tasks: updates.yml
+  when: baseline_auto_updates | bool
+  tags: [updates]
+
+- name: Time, kernel and logs
+  ansible.builtin.import_tasks: hardening.yml
+  tags: [hardening]
+
+- name: NetCockpit agent
+  ansible.builtin.import_tasks: netcockpit.yml
+  when: baseline_netcockpit_server | length > 0
+  tags: [netcockpit]

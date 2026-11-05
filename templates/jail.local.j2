@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+[DEFAULT]
+bantime  = {{ baseline_fail2ban_bantime }}
+findtime = {{ baseline_fail2ban_findtime }}
+maxretry = {{ baseline_fail2ban_maxretry }}
+backend  = systemd
+ignoreip = 127.0.0.1/8 ::1{% for n in baseline_trusted_networks %} {{ n }}{% endfor %}
+
+{% if baseline_firewall_enabled | bool %}
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+{% endif %}
+
+[sshd]
+enabled = true
+port    = {{ baseline_ssh_port }}

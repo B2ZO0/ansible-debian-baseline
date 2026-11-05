@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+# Loaded before the other files: the first value read wins in sshd.
+Port {{ baseline_ssh_port }}
+PermitRootLogin {{ baseline_ssh_permit_root_login }}
+PasswordAuthentication {{ 'yes' if baseline_ssh_password_auth | bool else 'no' }}
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+MaxAuthTries {{ baseline_ssh_max_auth_tries }}
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+X11Forwarding no
+AllowAgentForwarding no
+{% if baseline_ssh_allow_groups | length > 0 %}
+AllowGroups {{ baseline_ssh_allow_groups | join(' ') }}
+{% endif %}
+{% if baseline_ssh_banner | bool %}
+Banner /etc/issue.net
+{% endif %}

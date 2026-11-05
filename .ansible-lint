@@ -1,0 +1,8 @@
+---
+profile: production
+exclude_paths:
+  - .github/
+mock_roles:
+  - debian_baseline
+skip_list:
+  - var-naming[no-role-prefix]   # short 'baseline_' prefix on purpose

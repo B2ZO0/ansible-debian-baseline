@@ -1,0 +1,42 @@
+---
+- name: Set the hostname
+  ansible.builtin.hostname:
+    name: "{{ baseline_hostname }}"
+  when: baseline_hostname | length > 0
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ baseline_packages + baseline_packages_extra }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Remove insecure clients
+  ansible.builtin.apt:
+    name: "{{ baseline_packages_absent }}"
+    state: absent
+
+- name: Read the current timezone
+  ansible.builtin.command: timedatectl show --property=Timezone --value
+  register: baseline_tz_current
+  changed_when: false
+  failed_when: false
+
+- name: Set the timezone
+  ansible.builtin.command: timedatectl set-timezone {{ baseline_timezone | quote }}
+  when: baseline_tz_current.stdout | default('') != baseline_timezone
+  changed_when: true
+
+- name: Install locales
+  ansible.builtin.apt:
+    name: locales
+    state: present
+
+- name: Enable the locale
+  ansible.builtin.lineinfile:
+    path: /etc/locale.gen
+    regexp: '^#?\s*{{ baseline_locale | regex_escape }}\s'
+    line: "{{ baseline_locale }} UTF-8"
+    create: true
+    mode: "0644"
+  notify: Generate locales

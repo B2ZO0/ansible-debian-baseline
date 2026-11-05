@@ -1,0 +1,86 @@
+---
+# ansible-debian-baseline: every setting, with safe defaults.
+# Override what you need in group_vars/ or in your playbook.
+
+# --- System -------------------------------------------------------------------------------
+baseline_timezone: "Etc/UTC"            # e.g. "Europe/Paris"
+baseline_hostname: ""                   # empty = keep the current hostname
+baseline_locale: "en_US.UTF-8"
+
+baseline_packages:
+  - bash-completion
+  - ca-certificates
+  - curl
+  - dnsutils
+  - git
+  - gnupg
+  - htop
+  - jq
+  - lsof
+  - needrestart
+  - rsync
+  - tmux
+  - unzip
+  - vim
+  - wget
+baseline_packages_extra: []             # your own additions
+baseline_packages_absent:
+  - telnet
+  - rsh-client
+
+# --- Admin users ----------------------------------------------------------------------------
+# - name: enzo
+#   ssh_keys: ["ssh-ed25519 AAAA... enzo@laptop"]
+#   sudo: true            # passwordless sudo when sudo_nopasswd is true
+#   sudo_nopasswd: false
+#   state: present        # absent removes the user
+baseline_admin_users: []
+
+# --- SSH ------------------------------------------------------------------------------------
+baseline_ssh_port: 22
+baseline_ssh_password_auth: false       # keys only. The role refuses to lock you out (see README).
+baseline_ssh_permit_root_login: "no"    # "no" or "prohibit-password"
+baseline_ssh_allow_groups: []           # e.g. ["sudo", "ssh-users"]; empty = no restriction
+baseline_ssh_max_auth_tries: 4
+baseline_ssh_banner: true
+
+# --- Firewall (nftables) -------------------------------------------------------------------
+baseline_firewall_enabled: true
+baseline_firewall_ssh_sources: ["0.0.0.0/0", "::/0"]   # restrict SSH to your admin networks
+# Extra inbound rules: { port: 443, proto: tcp, sources: ["0.0.0.0/0"], comment: "HTTPS" }
+baseline_firewall_rules: []
+baseline_firewall_allow_ping: true
+
+# --- Fail2ban -------------------------------------------------------------------------------
+baseline_fail2ban_enabled: true
+baseline_fail2ban_bantime: "1h"
+baseline_fail2ban_findtime: "10m"
+baseline_fail2ban_maxretry: 5
+baseline_trusted_networks: []           # never banned, e.g. ["10.0.0.0/8"]
+
+# --- Automatic security updates ---------------------------------------------------------------
+baseline_auto_updates: true
+baseline_auto_reboot: false
+baseline_auto_reboot_time: "03:30"
+baseline_auto_updates_mail: ""          # e.g. "admin@example.com" (needs a working MTA)
+
+# --- Time -----------------------------------------------------------------------------------
+baseline_ntp_servers:
+  - 0.debian.pool.ntp.org
+  - 1.debian.pool.ntp.org
+  - 2.debian.pool.ntp.org
+
+# --- Kernel and logs -----------------------------------------------------------------------
+baseline_sysctl_hardening: true
+baseline_journald_max_use: "500M"
+
+# --- Message of the day ------------------------------------------------------------------------
+baseline_motd_enabled: true
+baseline_motd_text: "Authorized access only. Activity may be monitored."
+
+# --- NetCockpit agent (optional) ------------------------------------------------------------
+# Set the address or DNS name of your NetCockpit host to install the Grafana Alloy agent:
+# metrics, systemd journal and LLDP/CDP neighbours are pushed to NetCockpit.
+# https://github.com/B2ZO0/netcockpit
+baseline_netcockpit_server: ""
+baseline_netcockpit_name: "{{ ansible_facts['hostname'] }}"

@@ -1,0 +1,60 @@
+---
+- name: Install chrony
+  ansible.builtin.apt:
+    name: chrony
+    state: present
+
+- name: Configure the time servers
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/conf.d/10-baseline.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chrony
+
+- name: Enable chrony
+  ansible.builtin.systemd_service:
+    name: chrony
+    enabled: true
+    state: started
+  tags: [services]
+
+- name: Apply kernel network hardening
+  ansible.builtin.template:
+    src: sysctl.conf.j2
+    dest: /etc/sysctl.d/90-baseline.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: baseline_sysctl_hardening | bool
+  notify: Reload sysctl
+
+- name: Create the journald drop-in folder
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Keep the system journal across reboots, with a size limit
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/10-baseline.conf
+    content: |
+      [Journal]
+      Storage=persistent
+      SystemMaxUse={{ baseline_journald_max_use }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart journald
+
+- name: Write the message of the day
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: "0644"
+  when: baseline_motd_enabled | bool

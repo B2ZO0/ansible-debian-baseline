@@ -1,0 +1,42 @@
+---
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+
+- name: Create the nftables drop-in folder
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Our rules live in their own table, so Docker or other tools keep their own rules.
+- name: Write the firewall rules
+  ansible.builtin.template:
+    src: baseline.nft.j2
+    dest: /etc/nftables.d/10-baseline.nft
+    owner: root
+    group: root
+    mode: "0640"
+    validate: nft -c -f %s
+  notify: Reload firewall
+
+- name: Load every file of /etc/nftables.d at boot
+  ansible.builtin.copy:
+    dest: /etc/nftables.conf
+    content: |
+      #!/usr/sbin/nft -f
+      # Managed by ansible-debian-baseline: each file in /etc/nftables.d manages its own table.
+      include "/etc/nftables.d/*.nft"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Reload firewall
+
+- name: Enable nftables at boot
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+  tags: [services]

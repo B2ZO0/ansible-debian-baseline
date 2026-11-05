@@ -1,0 +1,110 @@
+---
+# Same agent as NetCockpit's agents/linux/install.sh: Grafana Alloy + lldpd.
+- name: Find the address used to reach NetCockpit
+  ansible.builtin.shell: |
+    set -o pipefail
+    target=$(getent ahostsv4 {{ baseline_netcockpit_server | quote }} | awk 'NR==1{print $1}')
+    ip -4 route get "${target:-{{ baseline_netcockpit_server }}}" | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}'
+  args:
+    executable: /bin/bash
+  register: baseline_agent_ip
+  changed_when: false
+  failed_when: false
+
+- name: Create the APT keyrings folder
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Add the Grafana signing key
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg.key
+    dest: /etc/apt/keyrings/grafana.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add the Grafana APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
+    filename: grafana
+    state: present
+
+- name: Install Alloy and lldpd
+  ansible.builtin.apt:
+    name: [alloy, lldpd, python3]
+    state: present
+    update_cache: true
+
+- name: Let lldpd also listen to Cisco CDP
+  ansible.builtin.copy:
+    dest: /etc/default/lldpd
+    content: 'DAEMON_ARGS="-c"{{ "\n" }}'
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart lldpd
+
+- name: Create the Alloy textfile folder
+  ansible.builtin.file:
+    path: /var/lib/alloy/textfile
+    state: directory
+    owner: alloy
+    group: alloy
+    mode: "0755"
+
+- name: Create the LLDP exporter folder
+  ansible.builtin.file:
+    path: /usr/local/lib/alloy-lldp
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the LLDP exporter
+  ansible.builtin.copy:
+    src: lldp2prom.py
+    dest: /usr/local/lib/alloy-lldp/lldp2prom.py
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the LLDP exporter service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [alloy-lldp.service, alloy-lldp.timer]
+  notify: Reload systemd
+
+- name: Write the Alloy configuration
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: /etc/alloy/config.alloy
+    owner: root
+    group: alloy
+    mode: "0640"
+  notify: Restart alloy
+
+- name: Let Alloy read the system journal
+  ansible.builtin.user:
+    name: alloy
+    groups: [systemd-journal, adm]
+    append: true
+  notify: Restart alloy
+
+- name: Flush handlers before starting the agent
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable the agent services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [lldpd, alloy-lldp.timer, alloy]
+  tags: [services]

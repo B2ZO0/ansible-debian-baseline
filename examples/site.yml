@@ -1,0 +1,18 @@
+---
+- name: Production-ready Debian servers
+  hosts: servers
+  become: true
+  vars:
+    baseline_timezone: "Europe/Paris"
+    baseline_admin_users:
+      - name: enzo
+        ssh_keys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyReplaceMe enzo@laptop"
+        sudo: true
+    baseline_firewall_ssh_sources: ["192.0.2.0/24"]   # your admin network
+    baseline_firewall_rules:
+      - { port: 443, proto: tcp, comment: "HTTPS" }
+    baseline_trusted_networks: ["192.0.2.0/24"]
+    baseline_netcockpit_server: ""                    # e.g. "supervision.example.local"
+  roles:
+    - role: debian_baseline

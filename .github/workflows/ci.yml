@@ -1,0 +1,30 @@
+---
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ansible-core ansible-lint yamllint
+      - run: yamllint .
+      - run: ansible-lint
+
+  apply:
+    # A real Ubuntu virtual machine with systemd: the role is applied to it twice.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install ansible-core
+      - name: Make the role available as debian_baseline
+        run: mkdir -p ~/roles && ln -s "$GITHUB_WORKSPACE" ~/roles/debian_baseline
+      - name: First run
+        run: ANSIBLE_ROLES_PATH=~/roles ansible-playbook tests/test.yml
+      - name: Second run changes nothing (idempotence)
+        run: |
+          ANSIBLE_ROLES_PATH=~/roles ansible-playbook tests/test.yml | tee run2.log
+          grep -qE 'localhost +: ok=[0-9]+ +changed=0 ' run2.log

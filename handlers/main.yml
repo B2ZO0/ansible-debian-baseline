@@ -1,0 +1,52 @@
+---
+- name: Generate locales
+  ansible.builtin.command: locale-gen
+  changed_when: true
+
+- name: Check the SSH configuration
+  ansible.builtin.command: sshd -t
+  changed_when: false
+  listen: Apply ssh settings
+
+# try-reload-or-restart: also safe with socket-activated sshd (Ubuntu 24.04)
+- name: Reload ssh
+  ansible.builtin.command: systemctl try-reload-or-restart ssh  # noqa: command-instead-of-module
+  changed_when: true
+  listen: Apply ssh settings
+
+- name: Reload firewall
+  ansible.builtin.command: nft -f /etc/nftables.conf
+  changed_when: true
+
+- name: Restart fail2ban
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    state: restarted
+
+- name: Restart chrony
+  ansible.builtin.systemd_service:
+    name: chrony
+    state: restarted
+
+- name: Reload sysctl
+  ansible.builtin.command: sysctl --system
+  changed_when: true
+
+- name: Restart journald
+  ansible.builtin.systemd_service:
+    name: systemd-journald
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Restart lldpd
+  ansible.builtin.systemd_service:
+    name: lldpd
+    state: restarted
+
+- name: Restart alloy
+  ansible.builtin.systemd_service:
+    name: alloy
+    state: restarted

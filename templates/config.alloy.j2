@@ -1,0 +1,66 @@
+// {{ ansible_managed }}
+// NetCockpit agent: metrics, systemd journal and LLDP/CDP neighbours, pushed to {{ baseline_netcockpit_server }}
+
+prometheus.exporter.unix "node" {
+  enable_collectors = ["systemd"]
+  textfile {
+    directory = "/var/lib/alloy/textfile"
+  }
+}
+
+discovery.relabel "node" {
+  targets = prometheus.exporter.unix.node.targets
+  rule {
+    target_label = "instance"
+    replacement  = "{{ baseline_netcockpit_name }}"
+  }
+  rule {
+    target_label = "job"
+    replacement  = "node"
+  }
+}
+
+prometheus.scrape "node" {
+  targets         = discovery.relabel.node.output
+  forward_to      = [prometheus.remote_write.main.receiver]
+  scrape_interval = "30s"
+}
+
+prometheus.remote_write "main" {
+  endpoint {
+    url = "http://{{ baseline_netcockpit_server }}:9090/api/v1/write"
+  }
+  external_labels = {
+    os = "linux",
+    ip = "{{ baseline_agent_ip.stdout | default('') }}",
+  }
+}
+
+loki.relabel "journal" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+  rule {
+    source_labels = ["__journal_syslog_identifier"]
+    target_label  = "app"
+  }
+}
+
+loki.source.journal "journal" {
+  forward_to    = [loki.write.main.receiver]
+  relabel_rules = loki.relabel.journal.rules
+  max_age       = "12h"
+  labels        = { job = "journal", host = "{{ baseline_netcockpit_name }}", os = "linux" }
+}
+
+loki.write "main" {
+  endpoint {
+    url = "http://{{ baseline_netcockpit_server }}:3100/loki/api/v1/push"
+  }
+}
