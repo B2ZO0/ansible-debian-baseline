@@ -11,6 +11,11 @@
   changed_when: false
   failed_when: false
 
+- name: Install the library used to manage APT sources
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+
 - name: Add the Grafana APT repository
   ansible.builtin.deb822_repository:
     name: grafana
