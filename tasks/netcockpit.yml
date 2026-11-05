@@ -35,7 +35,8 @@
 - name: Let lldpd also listen to Cisco CDP
   ansible.builtin.copy:
     dest: /etc/default/lldpd
-    content: 'DAEMON_ARGS="-c"{{ "\n" }}'
+    content: |
+      DAEMON_ARGS="-c"
     owner: root
     group: root
     mode: "0644"
