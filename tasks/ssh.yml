@@ -4,6 +4,15 @@
     name: openssh-server
     state: present
 
+# Needed by "sshd -t" when sshd is socket-activated and not running yet (Ubuntu 24.04)
+- name: Create the sshd privilege separation folder
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Make sure sshd reads its drop-in folder
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config

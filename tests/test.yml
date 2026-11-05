@@ -46,6 +46,11 @@
           - "'tcp dport 22 accept' in nft_rules.stdout"
           - "'tcp dport 443 accept' in nft_rules.stdout"
 
+    - name: Read the services
+      ansible.builtin.service_facts:
+
     - name: Services are running
-      ansible.builtin.command: systemctl is-active fail2ban chrony alloy lldpd
-      changed_when: false
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['services'][item ~ '.service']['state'] == 'running'
+      loop: [fail2ban, chrony, alloy, lldpd]

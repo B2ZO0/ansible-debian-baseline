@@ -7,8 +7,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12" }
       - run: pip install ansible-core ansible-lint yamllint
       - run: yamllint .
@@ -18,7 +18,7 @@ jobs:
     # A real Ubuntu virtual machine with systemd: the role is applied to it twice.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: pipx install ansible-core
       - name: Make the role available as debian_baseline
         run: mkdir -p ~/roles && ln -s "$GITHUB_WORKSPACE" ~/roles/debian_baseline
