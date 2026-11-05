@@ -28,3 +28,8 @@ jobs:
         run: |
           ANSIBLE_ROLES_PATH=~/roles ansible-playbook tests/test.yml | tee run2.log
           grep -qE 'localhost +: ok=[0-9]+ +changed=0 ' run2.log
+      - name: Service logs (on failure)
+        if: failure()
+        run: |
+          sudo systemctl status lldpd alloy fail2ban chrony ssh --no-pager -l || true
+          sudo journalctl -u lldpd -u alloy -u fail2ban -n 60 --no-pager || true
