@@ -78,6 +78,12 @@ Un playbook minimal :
 
 Tu ne veux qu'une partie ? Chaque domaine a son tag : `--tags ssh,firewall` ou `--skip-tags updates`.
 
+### Avant de le lancer
+
+- **Restreins SSH** : par défaut, SSH est ouvert à tous (`0.0.0.0/0`). Renseigne `baseline_firewall_ssh_sources` avec tes réseaux d'administration.
+- **L'agent NetCockpit envoie métriques et journaux en clair** (HTTP) vers ton hôte NetCockpit : garde ce trafic sur ton réseau interne.
+- `sudo_nopasswd: true` est pratique pour l'automatisation, mais une clé SSH volée donne alors root : réserve-le aux comptes d'automatisation.
+
 ## ⚙️ Variables principales
 
 Toutes les variables et leurs valeurs par défaut sont dans [`defaults/main.yml`](defaults/main.yml).

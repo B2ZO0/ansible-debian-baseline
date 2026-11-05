@@ -79,6 +79,12 @@ A minimal playbook:
 
 Only want part of it? Every area has a tag: `--tags ssh,firewall` or `--skip-tags updates`.
 
+### Before you run it
+
+- **Restrict SSH**: the default allows SSH from everywhere (`0.0.0.0/0`). Set `baseline_firewall_ssh_sources` to your admin networks.
+- **The NetCockpit agent sends metrics and logs in clear text** (HTTP) to your NetCockpit host: keep that traffic on your internal network.
+- `sudo_nopasswd: true` is convenient for automation, but a stolen SSH key then gives root: keep it for dedicated automation accounts.
+
 ## ⚙️ Main variables
 
 All variables and their defaults are in [`defaults/main.yml`](defaults/main.yml).
